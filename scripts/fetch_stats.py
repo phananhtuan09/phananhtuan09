@@ -12,7 +12,7 @@ from pathlib import Path
 API = "https://api.github.com/graphql"
 
 QUERY = """
-query($login: String!, $cursor: String) {
+query($login: String!) {
   user(login: $login) {
     contributionsCollection {
       totalCommitContributions
@@ -24,10 +24,7 @@ query($login: String!, $cursor: String) {
         weeks { contributionDays { date contributionCount } }
       }
     }
-    repositories(ownerAffiliations: OWNER, isFork: false, first: 100, after: $cursor) {
-      pageInfo { hasNextPage endCursor }
-      nodes { stargazerCount }
-    }
+    repositories(ownerAffiliations: OWNER, isFork: false) { totalCount }
   }
 }
 """
@@ -58,13 +55,7 @@ def main():
     login, out = sys.argv[1], Path(sys.argv[2])
     token = os.environ["GH_TOKEN"]
 
-    user = graphql(token, {"login": login, "cursor": None})
-    stars = sum(r["stargazerCount"] for r in user["repositories"]["nodes"])
-    page = user["repositories"]["pageInfo"]
-    while page["hasNextPage"]:
-        more = graphql(token, {"login": login, "cursor": page["endCursor"]})["repositories"]
-        stars += sum(r["stargazerCount"] for r in more["nodes"])
-        page = more["pageInfo"]
+    user = graphql(token, {"login": login})
 
     cc = user["contributionsCollection"]
     days = [d for w in cc["contributionCalendar"]["weeks"] for d in w["contributionDays"]]
@@ -75,7 +66,7 @@ def main():
         "prs": cc["totalPullRequestContributions"],
         "reviews": cc["totalPullRequestReviewContributions"],
         "issues": cc["totalIssueContributions"],
-        "stars": stars,
+        "repos": user["repositories"]["totalCount"],
         "longest_streak": longest_streak(days),
         "sample": False,
     }

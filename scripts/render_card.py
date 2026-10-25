@@ -38,7 +38,7 @@ SKILL_EDGES = [("html", "css"), ("css", "js"), ("js", "ts"), ("js", "react"), ("
 SKILL_ORDER = ["html", "css", "js", "ts", "php", "py", "react", "next", "node", "nest", "mysql"]
 
 # Radar axes reach the rim at these values; a log scale keeps small numbers visible.
-RADAR_CAPS = {"commits": 1500, "prs": 150, "reviews": 150, "issues": 60, "stars": 150, "longest_streak": 90}
+RADAR_CAPS = {"commits": 1500, "prs": 150, "reviews": 150, "issues": 60, "repos": 60, "longest_streak": 90}
 
 GOLD, INK, DIM, BG, CARD = "#d4b072", "#ece6da", "#8a8494", "#0c0b10", "#121119"
 ART = ["#d4b072", "#e8735a", "#5fb3a6", "#8a8ff0"]
@@ -185,7 +185,7 @@ def render(s):
     # radar
     rx, ry, R = 478, 266, 70
     vals = [max(.08, min(1, math.log1p(s[k]) / math.log1p(RADAR_CAPS[k])))
-            for k in ("commits", "prs", "reviews", "issues", "stars", "longest_streak")]
+            for k in ("commits", "prs", "reviews", "issues", "repos", "longest_streak")]
     labels = ["STR", "DEX", "INT", "WIS", "CHA", "CON"]
 
     def pt(k, f):
@@ -208,7 +208,7 @@ def render(s):
 
     # attribute list
     rows = [("STR", "Commits", s["commits"]), ("DEX", "Pull requests", s["prs"]), ("INT", "Code reviews", s["reviews"]),
-            ("WIS", "Issues", s["issues"]), ("CHA", "Stars earned", s["stars"]), ("CON", "Longest streak", f'{s["longest_streak"]}d')]
+            ("WIS", "Issues", s["issues"]), ("CHA", "Repositories", s["repos"]), ("CON", "Longest streak", f'{s["longest_streak"]}d')]
     for i, (a, name, v) in enumerate(rows):
         y = 190 + i * 31
         add(f'''
@@ -329,7 +329,7 @@ def render(s):
 
     title = f'{s["name"]} — Level {s["level"]} {s["klass"]}'
     desc = (f'{s["xp"]} contributions this year; {s["commits"]} commits, {s["prs"]} pull requests, '
-            f'{s["reviews"]} code reviews, {s["issues"]} issues, {s["stars"]} stars, longest streak {s["longest_streak"]} days.')
+            f'{s["reviews"]} code reviews, {s["issues"]} issues, {s["repos"]} repositories, longest streak {s["longest_streak"]} days.')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" role="img" aria-labelledby="t d">'
             f'<title id="t">{esc(title)}</title><desc id="d">{esc(desc)}</desc>'
             f'<style>{css}</style>{defs}'
