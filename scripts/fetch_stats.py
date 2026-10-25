@@ -1,0 +1,88 @@
+"""Fetch last-year GitHub activity for the profile card and write it as JSON.
+
+Usage: GH_TOKEN=... python scripts/fetch_stats.py <login> data/stats.json
+"""
+import json
+import os
+import sys
+import urllib.request
+from datetime import date
+from pathlib import Path
+
+API = "https://api.github.com/graphql"
+
+QUERY = """
+query($login: String!, $cursor: String) {
+  user(login: $login) {
+    contributionsCollection {
+      totalCommitContributions
+      totalPullRequestContributions
+      totalPullRequestReviewContributions
+      totalIssueContributions
+      contributionCalendar {
+        totalContributions
+        weeks { contributionDays { date contributionCount } }
+      }
+    }
+    repositories(ownerAffiliations: OWNER, isFork: false, first: 100, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes { stargazerCount }
+    }
+  }
+}
+"""
+
+
+def graphql(token, variables):
+    req = urllib.request.Request(
+        API,
+        data=json.dumps({"query": QUERY, "variables": variables}).encode(),
+        headers={"Authorization": f"bearer {token}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as res:
+        body = json.load(res)
+    if body.get("errors"):
+        raise SystemExit(f"GraphQL error: {body['errors']}")
+    return body["data"]["user"]
+
+
+def longest_streak(days):
+    best = run = 0
+    for day in days:
+        run = run + 1 if day["contributionCount"] > 0 else 0
+        best = max(best, run)
+    return best
+
+
+def main():
+    login, out = sys.argv[1], Path(sys.argv[2])
+    token = os.environ["GH_TOKEN"]
+
+    user = graphql(token, {"login": login, "cursor": None})
+    stars = sum(r["stargazerCount"] for r in user["repositories"]["nodes"])
+    page = user["repositories"]["pageInfo"]
+    while page["hasNextPage"]:
+        more = graphql(token, {"login": login, "cursor": page["endCursor"]})["repositories"]
+        stars += sum(r["stargazerCount"] for r in more["nodes"])
+        page = more["pageInfo"]
+
+    cc = user["contributionsCollection"]
+    days = [d for w in cc["contributionCalendar"]["weeks"] for d in w["contributionDays"]]
+    stats = {
+        "season": date.today().year,
+        "xp": cc["contributionCalendar"]["totalContributions"],
+        "commits": cc["totalCommitContributions"],
+        "prs": cc["totalPullRequestContributions"],
+        "reviews": cc["totalPullRequestReviewContributions"],
+        "issues": cc["totalIssueContributions"],
+        "stars": stars,
+        "longest_streak": longest_streak(days),
+        "sample": False,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(stats))
+
+
+if __name__ == "__main__":
+    main()
