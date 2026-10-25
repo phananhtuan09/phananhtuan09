@@ -38,7 +38,7 @@ SKILL_EDGES = [("html", "css"), ("css", "js"), ("js", "ts"), ("js", "react"), ("
 SKILL_ORDER = ["html", "css", "js", "ts", "php", "py", "react", "next", "node", "nest", "mysql"]
 
 # Radar axes reach the rim at these values; a log scale keeps small numbers visible.
-RADAR_CAPS = {"commits": 1500, "prs": 150, "reviews": 150, "issues": 60, "repos": 60, "longest_streak": 90}
+RADAR_CAPS = {"commits": 1500, "prs": 150, "active_days": 365, "issues": 60, "repos": 60, "longest_streak": 90}
 
 GOLD, INK, DIM, BG, CARD = "#d4b072", "#ece6da", "#8a8494", "#0c0b10", "#121119"
 ART = ["#d4b072", "#e8735a", "#5fb3a6", "#8a8ff0"]
@@ -158,7 +158,7 @@ def render(s):
     </g>
 
     <g class="rise d9" text-anchor="middle">
-      {"".join(f'<text x="{x}" y="463" class="serif b" font-size="23" fill="{INK}">{v}</text><text x="{x}" y="479" class="mono" font-size="9" letter-spacing="1.5" fill="{DIM}">{label}</text>' for x, v, label in [(106, s["commits"], "ATK"), (190, s["prs"], "MANA"), (274, s["reviews"], "WIS")])}
+      {"".join(f'<text x="{x}" y="463" class="serif b" font-size="23" fill="{INK}">{v}</text><text x="{x}" y="479" class="mono" font-size="9" letter-spacing="1.5" fill="{DIM}">{label}</text>' for x, v, label in [(106, s["commits"], "ATK"), (190, s["prs"], "MANA"), (274, s["active_days"], "INT")])}
     </g>
   </g>''')
 
@@ -185,7 +185,7 @@ def render(s):
     # radar
     rx, ry, R = 478, 266, 70
     vals = [max(.08, min(1, math.log1p(s[k]) / math.log1p(RADAR_CAPS[k])))
-            for k in ("commits", "prs", "reviews", "issues", "repos", "longest_streak")]
+            for k in ("commits", "prs", "active_days", "issues", "repos", "longest_streak")]
     labels = ["STR", "DEX", "INT", "WIS", "CHA", "CON"]
 
     def pt(k, f):
@@ -207,7 +207,7 @@ def render(s):
   {verts}''')
 
     # attribute list
-    rows = [("STR", "Commits", s["commits"]), ("DEX", "Pull requests", s["prs"]), ("INT", "Code reviews", s["reviews"]),
+    rows = [("STR", "Commits", s["commits"]), ("DEX", "Pull requests", s["prs"]), ("INT", "Active days", s["active_days"]),
             ("WIS", "Issues", s["issues"]), ("CHA", "Repositories", s["repos"]), ("CON", "Longest streak", f'{s["longest_streak"]}d')]
     for i, (a, name, v) in enumerate(rows):
         y = 190 + i * 31
@@ -329,7 +329,7 @@ def render(s):
 
     title = f'{s["name"]} — Level {s["level"]} {s["klass"]}'
     desc = (f'{s["xp"]} contributions this year; {s["commits"]} commits, {s["prs"]} pull requests, '
-            f'{s["reviews"]} code reviews, {s["issues"]} issues, {s["repos"]} repositories, longest streak {s["longest_streak"]} days.')
+            f'{s["active_days"]} active days, {s["issues"]} issues, {s["repos"]} repositories, longest streak {s["longest_streak"]} days.')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" role="img" aria-labelledby="t d">'
             f'<title id="t">{esc(title)}</title><desc id="d">{esc(desc)}</desc>'
             f'<style>{css}</style>{defs}'
