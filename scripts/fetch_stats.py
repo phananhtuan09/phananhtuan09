@@ -14,7 +14,11 @@ API = "https://api.github.com/graphql"
 QUERY = """
 query($login: String!) {
   user(login: $login) {
+    createdAt
+    followers { totalCount }
+    pullRequests(states: MERGED) { totalCount }
     contributionsCollection {
+      totalRepositoriesWithContributedCommits
       totalCommitContributions
       totalPullRequestContributions
       totalPullRequestReviewContributions
@@ -51,6 +55,19 @@ def longest_streak(days):
     return best
 
 
+def current_streak(days):
+    # Today may have no contributions yet, so a streak ending yesterday still counts.
+    counts = [d["contributionCount"] for d in days]
+    if counts and counts[-1] == 0:
+        counts.pop()
+    run = 0
+    for c in reversed(counts):
+        if c == 0:
+            break
+        run += 1
+    return run
+
+
 def main():
     login, out = sys.argv[1], Path(sys.argv[2])
     token = os.environ["GH_TOKEN"]
@@ -68,6 +85,13 @@ def main():
         "issues": cc["totalIssueContributions"],
         "repos": user["repositories"]["totalCount"],
         "longest_streak": longest_streak(days),
+        # Extra stats the card can show instead of the ones above.
+        "current_streak": current_streak(days),
+        "active_days": sum(1 for d in days if d["contributionCount"] > 0),
+        "repos_contributed": cc["totalRepositoriesWithContributedCommits"],
+        "merged_prs_all_time": user["pullRequests"]["totalCount"],
+        "followers": user["followers"]["totalCount"],
+        "years_on_github": date.today().year - int(user["createdAt"][:4]),
         "sample": False,
     }
     out.parent.mkdir(parents=True, exist_ok=True)
