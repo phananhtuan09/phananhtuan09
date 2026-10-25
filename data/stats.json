@@ -1,11 +1,17 @@
 {
   "season": 2026,
-  "xp": 609,
-  "commits": 491,
+  "xp": 610,
+  "commits": 492,
   "prs": 74,
   "reviews": 1,
   "issues": 23,
   "repos": 54,
   "longest_streak": 21,
+  "current_streak": 10,
+  "active_days": 136,
+  "repos_contributed": 12,
+  "merged_prs_all_time": 96,
+  "followers": 0,
+  "years_on_github": 5,
   "sample": false
 }
