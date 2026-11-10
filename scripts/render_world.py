@@ -8,9 +8,10 @@ import random
 import sys
 from pathlib import Path
 
+from app_stack import app_stack
 from render_card import derive
-from svg_kit import (ART, BG, CARD, DIM, GOLD, INK, PALE, RULE, SOFT, corners, corona, diamond, document, embers, esc,
-                     foil_defs, foil_sheet, sigil, sparkle, starfield, write)
+from svg_kit import (ART, BG, CARD, DIM, GOLD, INK, PALE, RULE, SOFT, corners, diamond, document, embers, esc,
+                     foil_defs, foil_sheet, sparkle, starfield, write)
 
 W = 880
 
@@ -47,11 +48,7 @@ def banner(s):
         a1 = a0 + math.pi * (0.2 + rnd.random() * 0.7)
         arcs.append(f'<path d="M{cx + rad * math.cos(a0):.1f} {cy + rad * math.sin(a0):.1f}A{rad} {rad} 0 0 1 '
                     f'{cx + rad * math.cos(a1):.1f} {cy + rad * math.sin(a1):.1f}" stroke="{ART[i % 4]}" stroke-opacity="{0.12 + rnd.random() * 0.3:.2f}"/>')
-    if s.get("calendar"):
-        rays, *_ = corona(cx, cy, 78, 24, s["calendar"])
-        sky = sigil(cx, cy, 70, "B") + rays
-    else:
-        sky = sigil(cx, cy, 92, "B")
+    sky, stack_css = app_stack(764)
     mastered = sum(1 for _, t in s["skills"].values() if t == "mastered")
     border, border_defs = frame(W, H, "B")
     body = f'''
@@ -71,10 +68,12 @@ def banner(s):
     <path d="M58 186H520" stroke="{GOLD}" stroke-opacity=".3"/>
     <text x="58" y="208" class="mono" font-size="11" letter-spacing="2" fill="{DIM}">LEVEL <tspan fill="{GOLD}">{s["level"]}</tspan> · <tspan fill="{GOLD}">{mastered}</tspan> SKILLS MASTERED · <tspan fill="{GOLD}">{s["merged_prs_all_time"]}</tspan> QUESTS COMPLETE</text>
   </g>'''
-    css = "\n.land{animation:land 1.2s cubic-bezier(.2,.9,.25,1) .2s both}\n@keyframes land{from{opacity:0;transform:translateY(-12px);filter:blur(8px)}}"
+    css = ("\n.land{animation:land 1.2s cubic-bezier(.2,.9,.25,1) .2s both}\n@keyframes land{from{opacity:0;transform:translateY(-12px);filter:blur(8px)}}"
+           + stack_css)
     defs = f'<clipPath id="bannerClip"><rect width="{W}" height="{H}" rx="12"/></clipPath>{border_defs}'
     title = f'{s["name"]} — {s["klass"]}'
-    desc = f'Level {s["level"]} {s["klass"]}, {mastered} skills mastered, {s["merged_prs_all_time"]} pull requests merged.'
+    desc = (f'Level {s["level"]} {s["klass"]}, {mastered} skills mastered, {s["merged_prs_all_time"]} pull requests merged. '
+            'Beside it, the layers of an app (data, server, interface, magic) float as enchanted tablets above a spell circle.')
     return document(W, H, title, desc, body, css, defs)
 
 

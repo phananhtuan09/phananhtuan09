@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" width="880" alt="Phan Anh Tuấn, Frontend Mage, with level, mastered skills and completed quests beside a spell circle crowned with a year of weekly contributions">
+  <img src="assets/banner.svg" width="880" alt="Phan Anh Tuấn, Frontend Mage, with level, mastered skills and completed quests beside the layers of an app floating as enchanted tablets above a spell circle">
 </p>
 
 <p align="center">
