@@ -219,7 +219,8 @@ def skill_tree(s):
 def node(x, y, tier, small=False):
     if tier == "mastered":
         r = 5 if small else 9
-        ring = "" if small else f'<circle class="pulse-slow" cx="{x}" cy="{y}" r="13" fill="none" stroke="{GOLD}" stroke-opacity=".6"/>'
+        ring = (f'<circle cx="{x}" cy="{y}" r="8" fill="none" stroke="{GOLD}" stroke-opacity=".6"/>' if small
+                else f'<circle class="pulse-slow" cx="{x}" cy="{y}" r="13" fill="none" stroke="{GOLD}" stroke-opacity=".6"/>')
         glow = "" if small else f'<circle cx="{x}" cy="{y}" r="18" fill="url(#coreGlow)"/>'
         return glow + ring + diamond(x, y, r, fill=PALE, stroke=GOLD, stroke_width=1.2)
     if tier == "trained":

@@ -52,7 +52,7 @@ def font_faces(body):
     for family, file, weight, style in FONTS:
         opts = subset.Options()
         opts.flavor = "woff2"
-        opts.layout_features = ["kern", "liga"]
+        opts.layout_features = ["kern", "liga", "lnum"]
         font = TTFont(HERE / "fonts" / file)
         sub = subset.Subsetter(opts)
         sub.populate(text=text)
@@ -157,7 +157,7 @@ def embers(rnd, x, y, w, n, rise=160):
 
 
 BASE_CSS = """
-.serif{font-family:'CG',Georgia,serif;font-weight:600}
+.serif{font-family:'CG',Georgia,serif;font-weight:600;font-variant-numeric:lining-nums}
 .b{font-weight:700}
 .i{font-style:italic}
 .mono{font-family:'JBM',ui-monospace,monospace;font-weight:500}
@@ -196,7 +196,7 @@ BASE_CSS = """
 @keyframes ember{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(var(--rise));opacity:0}}
 @keyframes breathe{50%{opacity:.55}}
 
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.sweep{display:none}}
 """
 
 
