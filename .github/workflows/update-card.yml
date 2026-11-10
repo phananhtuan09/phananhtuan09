@@ -36,14 +36,16 @@ jobs:
           GH_TOKEN: ${{ secrets.PROFILE_TOKEN || secrets.GITHUB_TOKEN }}
         run: python scripts/fetch_stats.py "${{ github.repository_owner }}" data/stats.json
 
-      - name: Render card
-        run: python scripts/render_card.py data/stats.json assets/profile-card.svg
+      - name: Render card, banner, quest log and achievements
+        run: |
+          python scripts/render_card.py data/stats.json assets/profile-card.svg
+          python scripts/render_world.py data/stats.json assets
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/stats.json assets/profile-card.svg
+          git add data/stats.json assets/*.svg
           if git diff --cached --quiet; then
             echo "Card unchanged"
           else

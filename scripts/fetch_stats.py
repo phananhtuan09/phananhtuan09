@@ -16,7 +16,10 @@ query($login: String!) {
   user(login: $login) {
     createdAt
     followers { totalCount }
-    pullRequests(states: MERGED) { totalCount }
+    pullRequests(states: MERGED, first: 40, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
+      nodes { title mergedAt additions deletions repository { name isPrivate } }
+    }
     contributionsCollection {
       totalRepositoriesWithContributedCommits
       totalCommitContributions
@@ -28,7 +31,13 @@ query($login: String!) {
         weeks { contributionDays { date contributionCount } }
       }
     }
-    repositories(ownerAffiliations: OWNER, isFork: false) { totalCount }
+    repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
+      totalCount
+      nodes {
+        languages(first: 20) { nodes { name } }
+        manifest: object(expression: "HEAD:package.json") { ... on Blob { text } }
+      }
+    }
   }
 }
 """
@@ -68,6 +77,33 @@ def current_streak(days):
     return run
 
 
+def repo_usage(repos):
+    """Count how many owned repositories use each language and each npm package."""
+    languages, packages = {}, {}
+    for repo in repos:
+        for lang in repo["languages"]["nodes"]:
+            languages[lang["name"]] = languages.get(lang["name"], 0) + 1
+        text = (repo.get("manifest") or {}).get("text")
+        if not text:
+            continue
+        try:
+            manifest = json.loads(text)
+        except ValueError:
+            continue
+        deps = {**manifest.get("dependencies", {}), **manifest.get("devDependencies", {})}
+        for name in ["package.json", *deps]:
+            packages[name] = packages.get(name, 0) + 1
+    return languages, packages
+
+
+def quests(prs, limit=5):
+    """Latest merged pull requests in public repositories (private ones never leave the API)."""
+    public = [p for p in prs if p["mergedAt"] and not p["repository"]["isPrivate"]]
+    public.sort(key=lambda p: p["mergedAt"], reverse=True)
+    return [{"title": p["title"], "repo": p["repository"]["name"], "merged": p["mergedAt"][:10],
+             "additions": p["additions"], "deletions": p["deletions"]} for p in public[:limit]]
+
+
 def main():
     login, out = sys.argv[1], Path(sys.argv[2])
     token = os.environ["GH_TOKEN"]
@@ -94,9 +130,11 @@ def main():
         "years_on_github": date.today().year - int(user["createdAt"][:4]),
         "sample": False,
     }
+    stats["repo_languages"], stats["repo_packages"] = repo_usage(user["repositories"]["nodes"])
+    stats["quests"] = quests(user["pullRequests"]["nodes"])
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(stats))
+    print(f"fetched stats for {login}: {stats['xp']} contributions, {len(stats['quests'])} quests")
 
 
 if __name__ == "__main__":
