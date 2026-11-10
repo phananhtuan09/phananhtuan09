@@ -123,6 +123,44 @@ def sigil(cx, cy, r, uid, incantation="RENDER · COMPOSE · HYDRATE · SHIP · "
     </g>'''
 
 
+WAVE_START, WAVE_STEP = 3.4, 0.042
+
+
+def corona(cx, cy, r, length, days):
+    """A year of contributions as rays around a sigil: one ray per week, clockwise from
+    twelve o'clock a year ago to today, its length set by that week's contributions.
+    `days` is a list of (iso_date, count), oldest first. Returns (svg, weeks, best_week).
+    """
+    weeks = [sum(c for _, c in days[i:i + 7]) for i in range(0, len(days), 7)]
+    n, top = len(weeks), max(max(weeks), 1)
+    width = math.tau * r / n * 0.36
+    rays = {0: [], 1: [], 2: [], 3: []}
+    tip = r
+    for i, v in enumerate(weeks):
+        a = -math.pi / 2 + (i + 0.5) * math.tau / n
+        ln = 2.5 if not v else 4 + (length - 4) * math.sqrt(v / top)
+        x0, y0 = cx + r * math.cos(a), cy + r * math.sin(a)
+        x1, y1 = cx + (r + ln) * math.cos(a), cy + (r + ln) * math.sin(a)
+        tip = r + ln + 6
+        band = 0 if not v else 1 + (v >= top * 0.25) + (v >= top * 0.6)
+        rays[band].append((i, f"M{x0:.1f} {y0:.1f}L{x1:.1f} {y1:.1f}"))
+    style = {0: (DIM, ".35"), 1: (GOLD, ".55"), 2: (GOLD, ".9"), 3: (PALE, "1")}
+    # Rays grow out week by week, sweeping clockwise to today; once grown, a wave of light
+    # keeps running the same way round the year and flares on today's marker.
+    out = []
+    for band, items in rays.items():
+        color, op = style[band]
+        out.extend(f'<path class="ray" style="--c:{color};--o:{op};--d:{0.9 + i * 0.03:.2f}s;--w:{WAVE_START + i * WAVE_STEP:.3f}s" '
+                   f'd="{d}" pathLength="1" stroke-width="{width:.1f}"/>' for i, d in items)
+    a = -math.pi / 2 + (n - 0.5) * math.tau / n
+    tx, ty = round(cx + tip * math.cos(a), 1), round(cy + tip * math.sin(a), 1)
+    today = (f'<g class="fade" style="animation-delay:{0.9 + n * 0.03:.2f}s">'
+             f'<circle class="flare-ring" style="--w:{WAVE_START + n * WAVE_STEP:.3f}s" cx="{tx}" cy="{ty}" r="6" fill="none" stroke="{PALE}"/>'
+             + diamond(tx, ty, 3.2, fill=PALE, class_="flare", style=f"--w:{WAVE_START + n * WAVE_STEP:.3f}s") + '</g>')
+    svg = f'<g stroke-linecap="round">{"".join(out)}</g>{today}'
+    return svg, n, max(weeks)
+
+
 def foil_defs(uid, width):
     """A moving iridescent sheet; mask it to any stroke to make that stroke read as foil."""
     return f'''
@@ -173,7 +211,7 @@ BASE_CSS = """
 
 /* ambient loops */
 .spin{transform-box:view-box}
-.s60{animation:spin 60s linear infinite}.s90{animation:spin 90s linear infinite}.s120{animation:spin 120s linear infinite}
+.s60{animation:spin 30s linear infinite}.s90{animation:spin 45s linear infinite}.s120{animation:spin 70s linear infinite}
 .rev{animation-direction:reverse}
 .sigil .draw{animation-delay:.8s}
 .halo{transform-box:fill-box;transform-origin:center;animation:halo 4s ease-in-out infinite}
@@ -181,6 +219,9 @@ BASE_CSS = """
 .tw{animation:tw 4s ease-in-out infinite}
 .foil{animation:foil 7s linear infinite}
 .ember{animation:ember 9s linear infinite}
+.ray{stroke:var(--c);stroke-opacity:var(--o);stroke-dasharray:1 1;animation:ray .7s cubic-bezier(.2,.7,.2,1) var(--d) both,wave 6s ease-in-out var(--w) infinite}
+.flare{transform-box:fill-box;transform-origin:center;animation:flare 6s ease-out var(--w) infinite}
+.flare-ring{opacity:0;transform-box:fill-box;transform-origin:center;animation:flare-ring 6s ease-out var(--w) infinite}
 .breathe{animation:breathe 6s ease-in-out infinite}
 
 @keyframes draw{from{stroke-dashoffset:100}}
@@ -195,8 +236,12 @@ BASE_CSS = """
 @keyframes foil{to{transform:translateX(var(--w))}}
 @keyframes ember{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(var(--rise));opacity:0}}
 @keyframes breathe{50%{opacity:.55}}
+@keyframes ray{from{stroke-dashoffset:1;opacity:0}}
+@keyframes wave{0%,9%,100%{stroke:var(--c);stroke-opacity:var(--o)}3%{stroke:#fff3d6;stroke-opacity:1}}
+@keyframes flare{0%{transform:scale(1)}4%{transform:scale(2.2) rotate(45deg)}14%,100%{transform:scale(1) rotate(90deg)}}
+@keyframes flare-ring{0%{opacity:0;transform:scale(.4)}3%{opacity:1}22%,100%{opacity:0;transform:scale(2.6)}}
 
-@media (prefers-reduced-motion:reduce){*{animation:none!important}.sweep{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.sweep,.mana{display:none}}
 """
 
 

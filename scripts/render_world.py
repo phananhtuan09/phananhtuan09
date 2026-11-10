@@ -1,4 +1,4 @@
-"""Render the rest of the profile world: title banner, quest log and achievements.
+"""Render the rest of the profile world: title banner and achievements.
 
 Usage: python scripts/render_world.py data/stats.json assets/
 """
@@ -6,12 +6,11 @@ import json
 import math
 import random
 import sys
-from datetime import date
 from pathlib import Path
 
 from render_card import derive
-from svg_kit import (ART, BG, CARD, DIM, GOLD, INK, PALE, RULE, SOFT, corners, diamond, document, embers, esc,
-                     foil_defs, foil_sheet, sigil, starfield, write)
+from svg_kit import (ART, BG, CARD, DIM, GOLD, INK, PALE, RULE, SOFT, corners, corona, diamond, document, embers, esc,
+                     foil_defs, foil_sheet, sigil, sparkle, starfield, write)
 
 W = 880
 
@@ -48,6 +47,11 @@ def banner(s):
         a1 = a0 + math.pi * (0.2 + rnd.random() * 0.7)
         arcs.append(f'<path d="M{cx + rad * math.cos(a0):.1f} {cy + rad * math.sin(a0):.1f}A{rad} {rad} 0 0 1 '
                     f'{cx + rad * math.cos(a1):.1f} {cy + rad * math.sin(a1):.1f}" stroke="{ART[i % 4]}" stroke-opacity="{0.12 + rnd.random() * 0.3:.2f}"/>')
+    if s.get("calendar"):
+        rays, *_ = corona(cx, cy, 78, 24, s["calendar"])
+        sky = sigil(cx, cy, 70, "B") + rays
+    else:
+        sky = sigil(cx, cy, 92, "B")
     mastered = sum(1 for _, t in s["skills"].values() if t == "mastered")
     border, border_defs = frame(W, H, "B")
     body = f'''
@@ -57,7 +61,7 @@ def banner(s):
     <g fill="none" stroke-linecap="round" class="spin s120" style="transform-origin:{cx}px {cy}px">{"".join(arcs)}</g>
     {embers(rnd, 560, H - 20, 300, 18, rise=200)}
   </g>
-  <g class="fade d4" fill="none">{sigil(cx, cy, 92, "B")}</g>
+  <g class="fade d4" fill="none">{sky}</g>
   {border}
   <g class="land">
     <text x="56" y="122" class="serif b" font-size="70" fill="{INK}">{esc(s["name"])}</text>
@@ -74,44 +78,6 @@ def banner(s):
     return document(W, H, title, desc, body, css, defs)
 
 
-def truncate(text, limit):
-    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
-
-
-def quest_log(s):
-    quests = s.get("quests", [])
-    rows = max(1, len(quests))
-    top, step = 118, 62
-    H = top + rows * step + 6
-    out = [f'''
-  <text class="rise" x="40" y="70" font-size="36" fill="{INK}"><tspan class="serif b">Quest Log</tspan></text>
-  <text class="rise d3" x="840" y="70" text-anchor="end" font-size="16" fill="{DIM}"><tspan class="serif i">latest merged pull requests</tspan></text>
-  <path class="fade d3" d="M40 88H840" stroke="{GOLD}" stroke-opacity=".3"/>''']
-    if not quests:
-        out.append(f'<text x="40" y="{top + 6}" font-size="18" fill="{SOFT}"><tspan class="serif i">No public quests completed yet. The first merged pull request lands here.</tspan></text>')
-    else:
-        out.append(f'<path class="draw d4" pathLength="100" stroke-dasharray="100 100" d="M150 {top}V{top + (rows - 1) * step}" stroke="{GOLD}" stroke-opacity=".35"/>')
-    for i, q in enumerate(quests):
-        y = top + i * step
-        when = date.fromisoformat(q["merged"]).strftime("%b %d").upper()
-        newest = i == 0
-        mark = (f'<circle cx="150" cy="{y}" r="16" fill="url(#coreGlow)"/>'
-                f'<circle class="pulse-slow" cx="150" cy="{y}" r="11" fill="none" stroke="{GOLD}" stroke-opacity=".6"/>'
-                + diamond(150, y, 7, fill=PALE, stroke=GOLD)) if newest else diamond(150, y, 6, fill=BG, stroke=GOLD)
-        out.append(f'''
-  <g class="slide" style="animation-delay:{0.5 + i * 0.12:.2f}s">
-    <text x="40" y="{y + 4}" class="mono" font-size="11" letter-spacing="1.4" fill="{GOLD if newest else DIM}">{when}</text>
-    {mark}
-    <text x="174" y="{y + 6}" class="serif b" font-size="19" fill="{INK}">{esc(truncate(q["title"], 72))}</text>
-    <text x="174" y="{y + 28}" class="mono" font-size="11" letter-spacing="1.4" fill="{GOLD}">{esc(q["repo"].upper())}</text>
-    <text x="840" y="{y + 28}" text-anchor="end" class="mono" font-size="11"><tspan fill="{ART[2]}">+{q["additions"]}</tspan><tspan fill="{ART[1]}" dx="10">−{q["deletions"]}</tspan></text>
-  </g>''')
-    css = "\n.pulse-slow{transform-box:fill-box;transform-origin:center;animation:ring2 3.6s ease-out 2s infinite}\n@keyframes ring2{0%{transform:scale(.7);opacity:.7}100%{transform:scale(1.6);opacity:0}}"
-    title = "Quest Log — latest merged pull requests"
-    desc = "; ".join(f'{q["merged"]}: {q["title"]} ({q["repo"]})' for q in quests) or "No public pull requests merged yet."
-    return document(W, H, title, desc, "".join(out), css, foil_defs("Q", W))
-
-
 def tier_of(value, thresholds):
     return sum(1 for t in thresholds if value >= t)
 
@@ -120,7 +86,10 @@ def achievements(s):
     H = 312
     earned = 0
     out = []
-    defs = [foil_defs("A", 60)]
+    defs = [foil_defs("A", 60), f'<linearGradient id="barShine"><stop offset="0" stop-color="{PALE}" stop-opacity="0"/>'
+            f'<stop offset=".5" stop-color="#fff8e8"/><stop offset="1" stop-color="{PALE}" stop-opacity="0"/></linearGradient>',
+            '<linearGradient id="sheen"><stop offset="0" stop-color="#fff8e8" stop-opacity="0"/>'
+            '<stop offset=".5" stop-color="#fff8e8" stop-opacity=".55"/><stop offset="1" stop-color="#fff8e8" stop-opacity="0"/></linearGradient>']
     for i, (name, key, unit, measure, thresholds) in enumerate(ACHIEVEMENTS):
         col, row = i % 4, i // 4
         x, y = 40 + col * 205, 116 + row * 96
@@ -131,27 +100,45 @@ def achievements(s):
         target = thresholds[min(tier, 2)]
         frac = 1 if maxed else min(1, value / target)
         mx, my, r = x + 28, y + 30, 27
+        bar_w = 112
+        beat = 1.8 + i * 0.25  # this medallion's moment in the light that runs along the rows
         if maxed:
             defs.append(f'<mask id="medal{i}">{diamond(mx, my, r, fill="none", stroke="#fff", stroke_width=2.4)}</mask>')
             ring = (diamond(mx, my, r, fill=CARD, stroke=GOLD, stroke_width=2.4)
                     + f'<g mask="url(#medal{i})">{foil_sheet("A", mx - r - 2, my - r - 2, 60, 2 * r + 4)}</g>'
-                    + f'<circle cx="{mx}" cy="{my}" r="24" fill="url(#coreGlow)"/>')
+                    + f'<circle class="breathe" cx="{mx}" cy="{my}" r="24" fill="url(#coreGlow)"/>')
         elif tier:
-            ring = diamond(mx, my, r, fill=CARD, stroke=GOLD, stroke_width=1.4)
+            ring = diamond(mx, my, r, fill=CARD, stroke=GOLD, stroke_width=1.4, class_="glint",
+                           style=f"animation-delay:{beat:.1f}s")
         else:
             ring = diamond(mx, my, r, fill=BG, stroke=GOLD, stroke_opacity=".35", stroke_dasharray="2 3")
-        inner = diamond(mx, my, r - 6, fill="none", stroke=GOLD, stroke_opacity=".3")
-        numeral = (f'<text x="{mx}" y="{my + 7}" text-anchor="middle" class="serif b" font-size="20" fill="{PALE if maxed else GOLD}">{ROMAN[tier]}</text>'
+        inner = diamond(mx, my, r - 6, fill="none", stroke=GOLD, stroke_opacity=".3",
+                        **({"class_": "turn", "style": f"animation-delay:{beat:.1f}s"} if tier else {}))
+        if maxed:
+            inner += "".join(sparkle(round(mx + dx, 1), round(my + dy, 1), sr, class_="twk",
+                                     style=f"animation-delay:{-k * 0.9:.1f}s")
+                             for k, (dx, dy, sr) in enumerate([(-24, -20, 4), (25, -12, 3), (18, 24, 3.5)]))
+        if tier:  # a band of light crosses the earned medallion face
+            defs.append(f'<clipPath id="face{i}">{diamond(mx, my, r - 1)}</clipPath>')
+            inner += (f'<g clip-path="url(#face{i})"><g transform="translate({mx} {my}) skewX(-22) translate({-mx} {-my})">'
+                      f'<rect class="sheen" style="animation-delay:{beat:.2f}s" x="{mx - r - 22}" y="{my - r}" width="18" height="{2 * r}" fill="url(#sheen)"/></g></g>')
+        numeral = (f'<text class="serif b{"" if maxed else " beat"}" style="animation-delay:{beat:.2f}s" x="{mx}" y="{my + 7}" text-anchor="middle" font-size="20" fill="{PALE if maxed else GOLD}">{ROMAN[tier]}</text>'
                    if tier else f'<text x="{mx}" y="{my + 4}" text-anchor="middle" class="mono" font-size="11" fill="{DIM}">—</text>')
+        defs.append(f'<clipPath id="bar{i}"><rect x="{x + 70}" y="{y + 43}" width="{bar_w * frac:.1f}" height="5"/></clipPath>')
+        spark = ("" if maxed or not frac else
+                 f'<circle class="spark" style="animation-delay:{beat + 0.9:.2f}s" cx="{x + 70 + bar_w * frac:.1f}" cy="{y + 45.5}" r="3" fill="none" stroke="{PALE}" stroke-width="1.5"/>'
+                 f'<circle cx="{x + 70 + bar_w * frac:.1f}" cy="{y + 45.5}" r="1.8" fill="{PALE}"/>')
         progress = f"MAX · {value} {unit}" if maxed else f"{value} / {target} {unit}"
-        bar_w = 112
         out.append(f'''
   <g class="pop" style="animation-delay:{0.4 + i * 0.09:.2f}s">{ring}{inner}{numeral}</g>
   <g class="slide" style="animation-delay:{0.5 + i * 0.09:.2f}s">
     <text x="{x + 70}" y="{y + 16}" class="serif b" font-size="19" fill="{INK if tier else DIM}">{name}</text>
     <text x="{x + 70}" y="{y + 34}" font-size="14" fill="{DIM}"><tspan class="serif i">{measure}</tspan></text>
     <rect x="{x + 70}" y="{y + 44}" width="{bar_w}" height="3" fill="{RULE}"/>
-    <rect class="fillbar" style="animation-delay:{0.9 + i * 0.09:.2f}s" x="{x + 70}" y="{y + 44}" width="{bar_w * frac:.1f}" height="3" fill="{PALE if maxed else GOLD}"/>
+    <g clip-path="url(#bar{i})">
+      <rect class="fillbar" style="animation-delay:{0.9 + i * 0.09:.2f}s" x="{x + 70}" y="{y + 44}" width="{bar_w * frac:.1f}" height="3" fill="{PALE if maxed else GOLD}"/>
+      <rect class="shimmer" style="--bw:{bar_w * frac + 40:.1f}px;animation-delay:{beat + 0.25:.2f}s" x="{x + 30}" y="{y + 43}" width="40" height="5" fill="url(#barShine)"/>
+    </g>{spark}
     <text x="{x + 70}" y="{y + 64}" class="mono" font-size="10.5" letter-spacing=".6" fill="{GOLD if tier else DIM}">{progress}</text>
   </g>''')
     total = 3 * len(ACHIEVEMENTS)
@@ -159,7 +146,24 @@ def achievements(s):
   <text class="rise" x="40" y="70" font-size="36" fill="{INK}"><tspan class="serif b">Achievements</tspan></text>
   <text class="rise d3" x="840" y="70" text-anchor="end" font-size="16" fill="{DIM}"><tspan class="serif i">{earned} of {total} tiers earned</tspan></text>
   <path class="fade d3" d="M40 88H840" stroke="{GOLD}" stroke-opacity=".3"/>'''
-    css = "\n.fillbar{transform-box:fill-box;transform-origin:left center;animation:fillx 1.4s cubic-bezier(.6,0,.2,1) both}\n@keyframes fillx{from{transform:scaleX(0)}}"
+    css = """
+.glint{animation:glint 5s ease-in-out infinite}
+@keyframes glint{0%,16%,100%{stroke:#d4b072;stroke-width:1.4px;filter:drop-shadow(0 0 0 rgba(244,227,184,0))}
+  6%{stroke:#fff3d6;stroke-width:2.6px;filter:drop-shadow(0 0 10px rgba(244,227,184,.95))}}
+.sheen{animation:sheen 5s cubic-bezier(.4,0,.2,1) infinite both}
+@keyframes sheen{0%{transform:translateX(0)}16%,100%{transform:translateX(98px)}}
+.beat{transform-box:fill-box;transform-origin:center;animation:beat 5s ease-out infinite}
+@keyframes beat{0%,14%,100%{transform:scale(1);fill:#d4b072}5%{transform:scale(1.25);fill:#fff3d6}}
+.turn{transform-box:fill-box;transform-origin:center;animation:turn 5s cubic-bezier(.6,0,.2,1) infinite}
+@keyframes turn{0%,3%{transform:rotate(0);stroke-opacity:.3}8%{stroke:#fff3d6;stroke-opacity:1}14%,100%{transform:rotate(90deg);stroke-opacity:.3}}
+.shimmer{animation:shimmer 5s cubic-bezier(.4,0,.2,1) infinite both}
+@keyframes shimmer{0%{transform:translateX(0)}16%,100%{transform:translateX(var(--bw))}}
+.spark{opacity:0;transform-box:fill-box;transform-origin:center;animation:spark 5s ease-out infinite}
+@keyframes spark{0%{opacity:1;transform:scale(.6)}14%,100%{opacity:0;transform:scale(3.4)}}
+.twk{transform-box:fill-box;transform-origin:center;animation:twk 2.7s ease-in-out infinite}
+@keyframes twk{50%{transform:scale(.3) rotate(45deg);opacity:.3}}
+.fillbar{transform-box:fill-box;transform-origin:left center;animation:fillx 1.4s cubic-bezier(.6,0,.2,1) both}
+@keyframes fillx{from{transform:scaleX(0)}}"""
     title = f"Achievements — {earned} of {total} tiers earned"
     desc = "; ".join(f"{n}: tier {tier_of(s[k], t)} of 3 ({s[k]} {u.lower()} {m})" for n, k, u, m, t in ACHIEVEMENTS)
     return document(W, H, title, desc, head + "".join(out), css, "".join(defs))
@@ -170,5 +174,4 @@ if __name__ == "__main__":
     out_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).parent.parent / "assets"
     s = derive(json.loads(stats_path.read_text(encoding="utf-8")))
     write(out_dir / "banner.svg", banner(s))
-    write(out_dir / "quest-log.svg", quest_log(s))
     write(out_dir / "achievements.svg", achievements(s))

@@ -36,7 +36,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PROFILE_TOKEN || secrets.GITHUB_TOKEN }}
         run: python scripts/fetch_stats.py "${{ github.repository_owner }}" data/stats.json
 
-      - name: Render card, banner, quest log and achievements
+      - name: Render card, banner and achievements
         run: |
           python scripts/render_card.py data/stats.json assets/profile-card.svg
           python scripts/render_world.py data/stats.json assets

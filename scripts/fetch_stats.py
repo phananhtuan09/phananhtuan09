@@ -16,10 +16,7 @@ query($login: String!) {
   user(login: $login) {
     createdAt
     followers { totalCount }
-    pullRequests(states: MERGED, first: 40, orderBy: {field: UPDATED_AT, direction: DESC}) {
-      totalCount
-      nodes { title mergedAt additions deletions repository { name isPrivate } }
-    }
+    pullRequests(states: MERGED) { totalCount }
     contributionsCollection {
       totalRepositoriesWithContributedCommits
       totalCommitContributions
@@ -96,14 +93,6 @@ def repo_usage(repos):
     return languages, packages
 
 
-def quests(prs, limit=5):
-    """Latest merged pull requests in public repositories (private ones never leave the API)."""
-    public = [p for p in prs if p["mergedAt"] and not p["repository"]["isPrivate"]]
-    public.sort(key=lambda p: p["mergedAt"], reverse=True)
-    return [{"title": p["title"], "repo": p["repository"]["name"], "merged": p["mergedAt"][:10],
-             "additions": p["additions"], "deletions": p["deletions"]} for p in public[:limit]]
-
-
 def main():
     login, out = sys.argv[1], Path(sys.argv[2])
     token = os.environ["GH_TOKEN"]
@@ -131,10 +120,10 @@ def main():
         "sample": False,
     }
     stats["repo_languages"], stats["repo_packages"] = repo_usage(user["repositories"]["nodes"])
-    stats["quests"] = quests(user["pullRequests"]["nodes"])
+    stats["calendar"] = [[d["date"], d["contributionCount"]] for d in days]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
-    print(f"fetched stats for {login}: {stats['xp']} contributions, {len(stats['quests'])} quests")
+    print(f"fetched stats for {login}: {stats['xp']} contributions")
 
 
 if __name__ == "__main__":

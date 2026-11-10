@@ -1,13 +1,9 @@
 <p align="center">
-  <img src="assets/banner.svg" width="880" alt="Phan Anh Tuấn, Frontend Mage, with level, mastered skills and completed quests beside a spell circle">
+  <img src="assets/banner.svg" width="880" alt="Phan Anh Tuấn, Frontend Mage, with level, mastered skills and completed quests beside a spell circle crowned with a year of weekly contributions">
 </p>
 
 <p align="center">
-  <img src="assets/profile-card.svg" width="880" alt="Phan Anh Tuấn — Frontend Mage character card with level, XP, GitHub stats and a skill tree ranked by how many repositories use each skill">
-</p>
-
-<p align="center">
-  <img src="assets/quest-log.svg" width="880" alt="Quest log: my latest merged pull requests in public repositories">
+  <img src="assets/profile-card.svg" width="880" alt="Phan Anh Tuấn — Frontend Mage character card with a spell circle crowned with a year of weekly contributions, level, XP, GitHub stats and a skill tree ranked by how many repositories use each skill">
 </p>
 
 <p align="center">

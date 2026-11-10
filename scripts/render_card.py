@@ -9,7 +9,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from svg_kit import (ART, BG, CARD, DIM, GOLD, INK, PALE, PROFILE, RULE, SOFT, corners, diamond, document,
+from svg_kit import (ART, BG, CARD, DIM, GOLD, INK, PALE, PROFILE, RULE, SOFT, corners, corona, diamond, document,
                      embers, esc, foil_defs, foil_sheet, level_of, sigil, sparkle, starfield, write)
 
 HERE = Path(__file__).parent
@@ -89,11 +89,12 @@ def card(s, rnd):
     <g class="fade d6">
       <rect x="{ax}" y="{ay}" width="{aw}" height="{ah}" fill="#0f0e15"/>
       <g clip-path="url(#artClip)" fill="none" stroke-linecap="round">
-        {starfield(rnd, ax, ay, aw, ah, 60)}
+        {starfield(rnd, ax, ay, aw, ah - 24, 60)}
         <g class="spin s120 rev" style="transform-origin:{cx}px {cy}px">{"".join(arcs)}</g>
-        {sigil(cx, cy, 84, "C")}
+        {sky_sigil(s, cx, cy)}
       </g>
       <rect x="{ax}" y="{ay}" width="{aw}" height="{ah}" fill="none" stroke="{GOLD}" stroke-opacity=".45"/>
+      {sky_caption(s, ax, ay, aw, ah)}
     </g>
 
     <g class="rise d7">
@@ -116,6 +117,24 @@ def card(s, rnd):
       {"".join(f'<text x="{sx}" y="505" class="serif b" font-size="25" fill="{INK}">{v}</text><text x="{sx}" y="522" class="mono" font-size="10" letter-spacing="1.6" fill="{DIM}">{label}</text>' for sx, v, label in stats)}
     </g>
   </g>'''
+
+
+def sky_sigil(s, cx, cy):
+    """The art window: a sigil, crowned with a year of weekly contributions when we have them."""
+    if not s.get("calendar"):
+        return sigil(cx, cy, 84, "C")
+    rays, *_ = corona(cx, cy, 70, 30, s["calendar"])
+    return sigil(cx, cy, 62, "C") + rays
+
+
+def sky_caption(s, ax, ay, aw, ah):
+    """Name what the rays show, so they read as data and not decoration."""
+    if not s.get("calendar"):
+        return ""
+    y = ay + ah - 9
+    return (f'<text x="{ax + 9}" y="{y}" class="mono" font-size="10" letter-spacing="1.2" fill="{DIM}">1 RAY = 1 WEEK</text>'
+            f'{diamond(ax + aw - 53, y - 3.5, 3.2, fill=PALE)}'
+            f'<text x="{ax + aw - 9}" y="{y}" text-anchor="end" class="mono" font-size="10" letter-spacing="1.2" fill="{DIM}">TODAY</text>')
 
 
 def level_block(s):
@@ -205,6 +224,9 @@ def skill_tree(s):
         op = [.25, .45, .7][min(rank[tier[a]], rank[tier[b]])]
         out.append(f'<path class="draw" style="animation-delay:{2.0 + i * 0.14:.2f}s" pathLength="100" stroke-dasharray="100 100" '
                    f'd="M{x0} {y0}C{mx} {y0} {mx} {y1} {x1} {y1}" fill="none" stroke="{GOLD}" stroke-opacity="{op}"/>')
+        if min(rank[tier[a]], rank[tier[b]]) >= 1:  # mana flows only between skills in use
+            out.append(f'<path class="mana" style="animation-delay:{3.2 + i * 0.37:.2f}s" pathLength="100" '
+                       f'd="M{x0} {y0}C{mx} {y0} {mx} {y1} {x1} {y1}" fill="none" stroke="{PALE}" stroke-width="2" stroke-linecap="round"/>')
     for i, k in enumerate(SKILLS):
         x, y = pos[k]
         delay = 2.0 + i * 0.12
@@ -252,6 +274,7 @@ def render(s):
 .shine{{animation:shine 4.5s ease-in-out 3.2s infinite}}
 .pulse{{transform-box:fill-box;transform-origin:center;animation:ring 2.4s ease-out 3.2s infinite}}
 .pulse-slow{{transform-box:fill-box;transform-origin:center;animation:ring2 3.6s ease-out 3s infinite}}
+.mana{{stroke-dasharray:10 190;animation:mana 4.2s cubic-bezier(.5,0,.5,1) both infinite}}
 
 @keyframes float{{50%{{transform:translateY(-5px)}}}}
 @keyframes holo{{0%{{transform:translateX(0)}}45%,100%{{transform:translateX(520px)}}}}
@@ -264,6 +287,7 @@ def render(s):
 @keyframes flash{{0%{{opacity:0;transform:scale(.6)}}5%{{opacity:1}}100%{{opacity:0;transform:scale(3.2)}}}}
 @keyframes shine{{0%{{transform:translateX(-70px)}}60%,100%{{transform:translateX({fill_w + 10}px)}}}}
 @keyframes ring{{0%{{transform:scale(.5);opacity:.9}}100%{{transform:scale(1.8);opacity:0}}}}
+@keyframes mana{{0%{{stroke-dashoffset:10;opacity:0}}5%{{opacity:1}}38%{{opacity:1}}45%,100%{{stroke-dashoffset:-100;opacity:0}}}}
 @keyframes ring2{{0%{{transform:scale(.7);opacity:.7}}100%{{transform:scale(1.6);opacity:0}}}}
 """
     x, y, w, h = 40, 40, 300, 500
