@@ -1,7 +1,7 @@
 {
   "season": 2026,
-  "xp": 800,
-  "commits": 561,
+  "xp": 794,
+  "commits": 556,
   "prs": 123,
   "reviews": 1,
   "issues": 43,
@@ -9,7 +9,7 @@
   "longest_streak": 21,
   "current_streak": 0,
   "active_days": 147,
-  "repos_contributed": 16,
+  "repos_contributed": 15,
   "merged_prs_all_time": 129,
   "followers": 0,
   "years_on_github": 5,
@@ -1849,6 +1849,10 @@
     ],
     [
       "2026-11-15",
+      0
+    ],
+    [
+      "2026-11-16",
       0
     ]
   ]
